@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  emeter1:
+    build: .
+    container_name: sma-emeter-1
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - MQTT_BROKER=${MQTT_HOST}
+      - MQTT_PORT=${MQTT_PORT}
+      - MQTT_TOPIC=${MQTT_TOPIC_PREFIX}/1
+      - SUSYID=${SUSYID_1}
+      - SERIAL=${SERIAL_1}
+
+  emeter2:
+    build: .
+    container_name: sma-emeter-2
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - MQTT_BROKER=${MQTT_HOST}
+      - MQTT_PORT=${MQTT_PORT}
+      - MQTT_TOPIC=${MQTT_TOPIC_PREFIX}/2
+      - SUSYID=${SUSYID_2}
+      - SERIAL=${SERIAL_2}

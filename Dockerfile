@@ -2,12 +2,14 @@
 FROM python:3.11-alpine AS builder
 WORKDIR /app
 
-# Abhängigkeiten für Build & git
+# System-Abhängigkeiten
 RUN apk add --no-cache git build-base
 
-# Requirements einfügen und installieren
+# Arbeitsverzeichnis und pip-Installationspfad
+ENV INSTALL_PATH=/install
+
 COPY requirements.txt .
-RUN pip install --user -r requirements.txt
+RUN pip install --no-cache-dir --prefix=${INSTALL_PATH} -r requirements.txt
 
 # SMA EMETER Simulator clonen
 RUN git clone https://github.com/RalfOGit/sma-emeter-simulator.git /app/simulator
@@ -16,13 +18,15 @@ RUN git clone https://github.com/RalfOGit/sma-emeter-simulator.git /app/simulato
 FROM python:3.11-alpine AS runtime
 WORKDIR /app
 
-# Laufzeitabhängigkeiten (z. B. für numpy)
+# Für numpy etc.
 RUN apk add --no-cache libgcc libstdc++
 
-# Übernehme nur die nötigen Dateien vom Builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH="/root/.local/bin:$PATH"
+# ENV für Pfad zu installierten Paketen
+ENV PYTHONPATH=/install/lib/python3.11/site-packages
+ENV PATH=/install/bin:$PATH
 
+# Kopiere nur das Nötige
+COPY --from=builder /install /install
 COPY --from=builder /app/simulator /app/simulator
 COPY mqtt_wrapper.py .
 

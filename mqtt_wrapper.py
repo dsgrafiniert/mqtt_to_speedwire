@@ -3,7 +3,9 @@ import paho.mqtt.client as mqtt
 import subprocess
 import threading
 import time
+from datetime import datetime
 
+# 🌐 Konfiguration
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_BASE_TOPIC = os.getenv("MQTT_TOPIC", "home/emeter/1")
@@ -11,7 +13,7 @@ SUSYID = int(os.getenv("SUSYID", 292))
 SERIAL = int(os.getenv("SERIAL", 3000000000))
 SEND_INTERVAL = float(os.getenv("SEND_INTERVAL", 1.0))  # Sekunden
 
-# 🧠 Gepufferte Messwerte
+# 🔐 Messwert-Puffer
 current_values = {
     "voltage": 230.0,
     "current": 0.0,
@@ -19,6 +21,16 @@ current_values = {
     "total_forward_energy": 0.0
 }
 lock = threading.Lock()
+
+def debug(msg, level="INFO"):
+    ts = datetime.now().strftime("%H:%M:%S")
+    color = {
+        "INFO": "\033[92m",   # Grün
+        "WARN": "\033[93m",   # Gelb
+        "ERR":  "\033[91m",   # Rot
+        "DBG":  "\033[94m",   # Blau
+    }.get(level, "\033[0m")
+    print(f"{color}[{level}] {ts} | {msg}\033[0m")
 
 # 🚀 Emeter UDP-Simulator aufrufen
 def run_emeter_simulator(payload: dict):
@@ -32,23 +44,27 @@ def run_emeter_simulator(payload: dict):
             "--voltage", str(payload["voltage"]),
             "--current", str(payload["current"])
         ]
+        debug(f"Sende UDP-Emeter-Daten: {cmd}", "DBG")
         subprocess.run(cmd, check=True)
     except Exception as e:
-        print("❌ Fehler beim Emeter-Senden:", e)
+        debug(f"Fehler beim Emeter-Senden: {e}", "ERR")
 
-# 🔁 1Hz-Loop zum Senden
+# 🔁 Wiederholte Emeter-Broadcasts
 def broadcast_loop():
+    debug("Starte UDP-Broadcast-Loop mit 1Hz", "INFO")
     while True:
         with lock:
             values = current_values.copy()
+        debug(f"Broadcast-Werte: {values}", "DBG")
         run_emeter_simulator(values)
         time.sleep(SEND_INTERVAL)
 
 # 📥 MQTT-Callbacks
 def on_connect(client, userdata, flags, reasonCode, properties):
-    print("✅ MQTT verbunden:", reasonCode)
-    client.subscribe(f"{MQTT_BASE_TOPIC}/#")
-    print(f"📡 Abonniert: {MQTT_BASE_TOPIC}/#")
+    debug(f"MQTT verbunden mit Code: {reasonCode}", "INFO")
+    topic = f"{MQTT_BASE_TOPIC}/#"
+    client.subscribe(topic)
+    debug(f"MQTT Subscribed to: {topic}", "INFO")
 
 def on_message(client, userdata, message):
     topic = message.topic
@@ -67,19 +83,22 @@ def on_message(client, userdata, message):
         if subkey in key_map:
             with lock:
                 current_values[key_map[subkey]] = value
-            print(f"🔄 Aktualisiert: {key_map[subkey]} = {value}")
+            debug(f"MQTT {subkey} → {key_map[subkey]}: {value}", "DBG")
         else:
-            print(f"⚠️ Ignoriert unbekanntes Subtopic: {subkey}")
+            debug(f"Ignoriertes Subtopic: {subkey}", "WARN")
     except ValueError:
-        print(f"⚠️ Ungültiger Wert für {topic}: {value_raw}")
+        debug(f"Ungültiger Wert für {topic}: {value_raw}", "ERR")
 
-# 🧠 MQTT Setup
+# 🔧 MQTT Setup
+debug(f"Starte Emeter-Simulator für SERIAL={SERIAL}, SUSYID={SUSYID}", "INFO")
+debug(f"MQTT: {MQTT_BROKER}:{MQTT_PORT}, Topic: {MQTT_BASE_TOPIC}/#", "INFO")
 client = mqtt.Client(protocol=mqtt.MQTTv5)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
 
-# 🔁 Broadcast starten
+# 🧵 Hintergrundthread starten
 threading.Thread(target=broadcast_loop, daemon=True).start()
 
+# 🚦 Starte MQTT-Loop
 client.loop_forever()

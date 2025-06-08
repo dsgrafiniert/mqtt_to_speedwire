@@ -53,7 +53,7 @@ def run_emeter_simulator(payload: dict):
         packet.end()
 
         packet_data = packet.getData()[:packet.getLength()]
-        destination_addresses = data.get('destinationAddresses', [])
+        destination_addresses = []
 
         with userdata['lock']:
             if serial_number not in userdata['packets'].keys():

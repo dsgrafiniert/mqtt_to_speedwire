@@ -1,33 +1,37 @@
-# -------- STAGE 1: Builder --------
-FROM python:3.11-slim AS builder
+# --------- STAGE 1: Build sma-emeter-simulator binary ---------
+FROM debian:bullseye-slim AS builder
+
+RUN apt-get update && apt-get install -y \
+    git cmake g++ build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+
+# Klone das Repository
+RUN git clone https://github.com/schoendo/sma-emeter-simulator.git .
+
+# Baue die Binary
+RUN cmake -B build && cmake --build build
+
+# --------- STAGE 2: Python Runtime ---------
+FROM python:3.11-slim
+
+# Installiere system libraries (für netifaces etc., falls nötig)
+RUN apt-get update && apt-get install -y libstdc++6 && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# System dependencies for pip builds
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git build-essential curl && \
-    rm -rf /var/lib/apt/lists/*
+# Kopiere Python-Dateien und requirements
+COPY mqtt_wrapper.py /app/mqtt_wrapper.py
+COPY requirements.txt /app/requirements.txt
 
-ENV INSTALL_PATH=/install
-COPY requirements.txt .
-RUN mkdir -p ${INSTALL_PATH}
-RUN pip install --no-cache-dir --prefix=${INSTALL_PATH} -r requirements.txt
+# Kopiere die kompilierte Binary aus dem Builder
+COPY --from=builder /src/build/send_emeter_data /app/send_emeter_data
 
-RUN git clone https://github.com/RalfOGit/sma-emeter-simulator.git /app/simulator
+# Installiere Python-Abhängigkeiten
+RUN pip install --no-cache-dir -r requirements.txt
 
-# -------- STAGE 2: Runtime --------
-FROM python:3.11-slim AS runtime
-WORKDIR /app
-
-# Runtime deps (if needed)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libstdc++6 && \
-    rm -rf /var/lib/apt/lists/*
-
-ENV PYTHONPATH=/install/lib/python3.11/site-packages
-ENV PATH=/install/bin:$PATH
-
-COPY --from=builder /install /install
-COPY --from=builder /app/simulator /app/simulator
-COPY mqtt_wrapper.py .
+# Stelle sicher, dass die Binary ausführbar ist
+RUN chmod +x /app/send_emeter_data
 
 CMD ["python", "mqtt_wrapper.py"]

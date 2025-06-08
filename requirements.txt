@@ -1,3 +1,6 @@
 paho-mqtt
 numpy
 netifaces
+dynaconf
+zeroconf
+requests

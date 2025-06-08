@@ -13,9 +13,7 @@ RUN git clone https://github.com/RalfOGit/libspeedwire.git libspeedwire
 # Baue die Binary
 RUN cmake -B build && cmake --build build
 RUN ls
-RUN cd build
-RUN ls
-
+RUN ls build
 # --------- STAGE 2: Python Runtime ---------
 FROM python:3.11-slim
 
@@ -29,7 +27,7 @@ COPY mqtt_wrapper.py /app/mqtt_wrapper.py
 COPY requirements.txt /app/requirements.txt
 
 # Kopiere die kompilierte Binary aus dem Builder
-COPY --from=builder /src/build/send_emeter_data /app/send_emeter_data
+COPY --from=builder /src/build/sma-emeter-simulator /app/send_emeter_data
 
 # Installiere Python-Abhängigkeiten
 RUN pip install --no-cache-dir -r requirements.txt

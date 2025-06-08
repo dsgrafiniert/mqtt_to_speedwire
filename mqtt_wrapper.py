@@ -1,49 +1,76 @@
 import os
+import json
 import paho.mqtt.client as mqtt
 import subprocess
-import json
+import threading
+import time
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
-MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "home/power/emeter")
-SUSYID = os.getenv("SUSYID", "12345")
-SERIAL = os.getenv("SERIAL", "10001")
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "home/emeter")
+SUSYID = int(os.getenv("SUSYID", 292))
+SERIAL = int(os.getenv("SERIAL", 3000000000))
+SEND_INTERVAL = float(os.getenv("SEND_INTERVAL", 1.0))  # seconds
 
+# 🔁 Aktuelle Werte werden hier gepuffert
+current_values = {
+    "active_power": 0.0,
+    "total_forward_energy": 0.0,
+    "voltage": 230.0,
+    "current": 0.0
+}
+lock = threading.Lock()
+
+def run_emeter_simulator(payload: dict):
+    try:
+        cmd = [
+            "python3", "simulator/send_emeter_data.py",
+            "--susy-id", str(SUSYID),
+            "--serial", str(SERIAL),
+            "--active-power", str(payload["active_power"]),
+            "--total-forward-energy", str(payload["total_forward_energy"]),
+            "--voltage", str(payload["voltage"]),
+            "--current", str(payload["current"])
+        ]
+        subprocess.run(cmd, check=True)
+    except Exception as e:
+        print("❌ Error running simulator:", e)
+
+# 🔁 Loop, das jede Sekunde einen Broadcast sendet
+def broadcast_loop():
+    while True:
+        with lock:
+            values = current_values.copy()
+        run_emeter_simulator(values)
+        time.sleep(SEND_INTERVAL)
+
+# 📥 MQTT-Callback
 def on_connect(client, userdata, flags, reasonCode, properties):
-    print("Connected with reasonCode", reasonCode)
+    print("✅ Connected to MQTT")
     client.subscribe(MQTT_TOPIC)
 
-def on_message(client, userdata, msg):
-    print(f"Message received on {msg.topic}: {msg.payload}")
-
+def on_message(client, userdata, message):
+    global current_values
     try:
-        payload = json.loads(msg.payload)
-        power = int(payload.get("power", 0))
-        voltage = float(payload.get("voltage", 230.0))
-        current = float(payload.get("current", 0.0))
-
-        print(f"[{MQTT_TOPIC}] Power={power}W Voltage={voltage}V Current={current}A")
-
-        subprocess.Popen([
-            "python", "/app/simulator/sma_emeter_simulator.py",
-            "--host", "239.12.255.254",
-            "--port", "9522",
-            "--power", str(power),
-            "--voltage", str(voltage),
-            "--current", str(current),
-            "--susyid", SUSYID,
-            "--serial", SERIAL
-        ])
+        payload = json.loads(message.payload.decode("utf-8"))
+        print(f"📨 MQTT: {payload}")
+        with lock:
+            current_values.update({
+                "active_power": float(payload.get("active_power", current_values["active_power"])),
+                "total_forward_energy": float(payload.get("total_forward_energy", current_values["total_forward_energy"])),
+                "voltage": float(payload.get("voltage", current_values["voltage"])),
+                "current": float(payload.get("current", current_values["current"]))
+            })
     except Exception as e:
-        print(f"[ERROR] {e}")
+        print("❌ Error in MQTT payload:", e)
 
-def main():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    print(f"[INFO] Subscribed to {MQTT_TOPIC} on {MQTT_BROKER}:{MQTT_PORT}")
-    client.loop_forever()
+# 🧠 MQTT Setup
+client = mqtt.Client(protocol=mqtt.MQTTv5)
+client.on_connect = on_connect
+client.on_message = on_message
+client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
 
-if __name__ == "__main__":
-    main()
+# 🔁 Starte Hintergrund-Broadcast-Thread
+threading.Thread(target=broadcast_loop, daemon=True).start()
+
+client.loop_forever()

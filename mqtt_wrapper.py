@@ -36,7 +36,7 @@ def debug(msg, level="INFO"):
 def run_emeter_simulator(payload: dict):
     try:
         cmd = [
-            "python3", "simulator/send_emeter_data.py",
+            "./send_emeter_data",
             "--susy-id", str(SUSYID),
             "--serial", str(SERIAL),
             "--active-power", str(payload["active_power"]),
@@ -44,10 +44,12 @@ def run_emeter_simulator(payload: dict):
             "--voltage", str(payload["voltage"]),
             "--current", str(payload["current"])
         ]
-        debug(f"Sende UDP-Emeter-Daten: {cmd}", "DBG")
+        debug(f"Starte Emeter-Simulator: {' '.join(cmd)}", "DBG")
         subprocess.run(cmd, check=True)
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         debug(f"Fehler beim Emeter-Senden: {e}", "ERR")
+    except Exception as e:
+        debug(f"Unerwarteter Fehler beim Emeter-Senden: {e}", "ERR")
 
 # 🔁 Wiederholte Emeter-Broadcasts
 def broadcast_loop():

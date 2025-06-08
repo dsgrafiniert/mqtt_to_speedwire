@@ -60,10 +60,10 @@ def run_emeter_simulator(payload: dict):
         packet_data = packet.getData()[:packet.getLength()]
         destination_addresses = []
 
-        with current_values['lock']:
-            if SERIAL not in userdata['packets'].keys():
+        with payload['lock']:
+            if SERIAL not in payload['packets'].keys():
                 logging.info("New mqtt meter added with serial number %s", SERIAL)
-            userdata['packets'][SERIAL] = (packet_data, destination_addresses)
+            payload['packets'][SERIAL] = (packet_data, destination_addresses)
             logging.debug("Updated packet for serial number %s", serial_number)
 
     except subprocess.CalledProcessError as e:

@@ -46,7 +46,6 @@ def debug(msg, level="INFO"):
 def run_emeter_simulator(payload: dict):
     try:
 
-        
         packet = emeterPacket(int(SERIAL))
         packet.begin(int(time.time() * 1000))
 
@@ -61,10 +60,10 @@ def run_emeter_simulator(payload: dict):
         packet_data = packet.getData()[:packet.getLength()]
         destination_addresses = []
 
-        with userdata['lock']:
-            if serial_number not in userdata['packets'].keys():
-                logging.info("New mqtt meter added with serial number %s", serial_number)
-            userdata['packets'][serial_number] = (packet_data, destination_addresses)
+        with current_values['lock']:
+            if SERIAL not in userdata['packets'].keys():
+                logging.info("New mqtt meter added with serial number %s", SERIAL)
+            userdata['packets'][SERIAL] = (packet_data, destination_addresses)
             logging.debug("Updated packet for serial number %s", serial_number)
 
     except subprocess.CalledProcessError as e:

@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /src
 
 # Klone das Repository
-RUN git clone https://github.com/schoendo/sma-emeter-simulator.git .
+RUN git clone https://github.com/RalfOGit/sma-emeter-simulator.git .
 
 # Baue die Binary
 RUN cmake -B build && cmake --build build

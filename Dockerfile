@@ -12,6 +12,9 @@ RUN git clone --recurse-submodules https://github.com/RalfOGit/sma-emeter-simula
 RUN git clone https://github.com/RalfOGit/libspeedwire.git libspeedwire
 # Baue die Binary
 RUN cmake -B build && cmake --build build
+RUN ls
+RUN cd build
+RUN ls
 
 # --------- STAGE 2: Python Runtime ---------
 FROM python:3.11-slim

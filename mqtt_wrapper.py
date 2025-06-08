@@ -3,7 +3,11 @@ import paho.mqtt.client as mqtt
 import subprocess
 import threading
 import time
+import udp
+
 from datetime import datetime
+from emeter import emeterPacket
+
 
 # 🌐 Konfiguration
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
@@ -35,17 +39,28 @@ def debug(msg, level="INFO"):
 # 🚀 Emeter UDP-Simulator aufrufen
 def run_emeter_simulator(payload: dict):
     try:
-        cmd = [
-            "./send_emeter_data",
-            "--susy-id", str(SUSYID),
-            "--serial", str(SERIAL),
-            "--active-power", str(payload["active_power"]),
-            "--total-forward-energy", str(payload["total_forward_energy"]),
-            "--voltage", str(payload["voltage"]),
-            "--current", str(payload["current"])
-        ]
-        debug(f"Starte Emeter-Simulator: {' '.join(cmd)}", "DBG")
-        subprocess.run(cmd, check=True)
+
+        
+        packet = emeterPacket(int(SERIAL))
+        packet.begin(int(time.time() * 1000))
+
+        # Totals
+        packet.addMeasurementValue(emeterPacket.SMA_POSITIVE_ACTIVE_POWER, round(payload["active_power"] * 10))
+        packet.addCounterValue(emeterPacket.SMA_POSITIVE_ACTIVE_ENERGY, round(payload["total_forward_energy"]] * 1000 * 3600))
+        packet.addMeasurementValue(emeterPacket.SMA_NEGATIVE_ACTIVE_POWER, 0)
+        packet.addCounterValue(emeterPacket.SMA_NEGATIVE_ACTIVE_ENERGY, 0)
+ 
+        packet.end()
+
+        packet_data = packet.getData()[:packet.getLength()]
+        destination_addresses = data.get('destinationAddresses', [])
+
+        with userdata['lock']:
+            if serial_number not in userdata['packets'].keys():
+                logging.info("New mqtt meter added with serial number %s", serial_number)
+            userdata['packets'][serial_number] = (packet_data, destination_addresses)
+            logging.debug("Updated packet for serial number %s", serial_number)
+
     except subprocess.CalledProcessError as e:
         debug(f"Fehler beim Emeter-Senden: {e}", "ERR")
     except Exception as e:
@@ -98,6 +113,7 @@ client = mqtt.Client(protocol=mqtt.MQTTv5)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
+udp_thread = udp.setup_udp()
 
 # 🧵 Hintergrundthread starten
 threading.Thread(target=broadcast_loop, daemon=True).start()

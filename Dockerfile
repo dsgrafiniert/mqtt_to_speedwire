@@ -10,7 +10,7 @@ COPY requirements.txt .
 
 # Erstelle /install manuell zur Sicherheit (wichtig für BuildKit!)
 RUN mkdir -p ${INSTALL_PATH}
-
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --prefix=${INSTALL_PATH} -r requirements.txt
 
 RUN git clone https://github.com/RalfOGit/sma-emeter-simulator.git /app/simulator

@@ -62,9 +62,9 @@ def run_emeter_simulator(payload: dict):
 
         with payload['lock']:
             if SERIAL not in payload['packets'].keys():
-                logging.info("New mqtt meter added with serial number %s", SERIAL)
+                debug(f"New mqtt meter added with serial number {SERIAL}", "INFO")
             payload['packets'][SERIAL] = (packet_data, destination_addresses)
-            logging.debug("Updated packet for serial number %s", serial_number)
+            debug(f"Updated packet for serial number {SERIAL}", "INFO")
 
     except subprocess.CalledProcessError as e:
         debug(f"Fehler beim Emeter-Senden: {e}", "ERR")

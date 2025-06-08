@@ -22,7 +22,13 @@ current_values = {
     "voltage": 230.0,
     "current": 0.0,
     "active_power": 0.0,
-    "total_forward_energy": 0.0
+    "total_forward_energy": 0.0,
+    "packets": {},
+    'lock': threading.Lock(),
+    'udp_address': '239.12.255.254',
+    'udp_port': 9522,
+    'homewizard_meters': {},
+    'ip_serial_numbers': {}
 }
 lock = threading.Lock()
 

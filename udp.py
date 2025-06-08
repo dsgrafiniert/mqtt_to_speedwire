@@ -2,7 +2,6 @@ import time
 import socket
 import logging
 import threading
-import homewizard
 from config import workingdata
 
 def setup_udp():
@@ -16,8 +15,6 @@ def udp_sender(userdata):
     udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
     logging.info('Starting udp loop')
     while True:
-        homewizard.update_homewizard()
-
         with userdata['lock']:
             for serial_number, (packet_data, destination_addresses) in userdata['packets'].items():
                 if destination_addresses:

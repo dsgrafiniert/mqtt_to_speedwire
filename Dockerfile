@@ -2,7 +2,7 @@
 FROM python:3.11-alpine AS builder
 WORKDIR /app
 
-RUN apk add --no-cache git build-base
+RUN apk add --no-cache git build-base linux-headers
 
 ENV INSTALL_PATH=/install
 

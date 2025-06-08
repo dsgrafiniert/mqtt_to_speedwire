@@ -9,7 +9,7 @@ WORKDIR /src
 
 # Klone das Repository
 RUN git clone --recurse-submodules https://github.com/RalfOGit/sma-emeter-simulator.git .
-
+RUN git clone https://github.com/RalfOGit/libspeedwire.git libspeedwire
 # Baue die Binary
 RUN cmake -B build && cmake --build build
 

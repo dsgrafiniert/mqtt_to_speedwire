@@ -18,7 +18,7 @@ RUN ls build
 FROM python:3.11-slim
 
 # Installiere system libraries (für netifaces etc., falls nötig)
-RUN apt-get update && apt-get install -y linux-headers libstdc++6 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y gcc libffi-dev libssl-dev python3-dev build-essential && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

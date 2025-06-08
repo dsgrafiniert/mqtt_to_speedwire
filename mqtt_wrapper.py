@@ -9,7 +9,13 @@ MQTT_TOPIC = os.getenv("MQTT_TOPIC", "home/power/emeter")
 SUSYID = os.getenv("SUSYID", "12345")
 SERIAL = os.getenv("SERIAL", "10001")
 
+def on_connect(client, userdata, flags, reasonCode, properties):
+    print("Connected with reasonCode", reasonCode)
+    client.subscribe(MQTT_TOPIC)
+
 def on_message(client, userdata, msg):
+    print(f"Message received on {msg.topic}: {msg.payload}")
+
     try:
         payload = json.loads(msg.payload)
         power = int(payload.get("power", 0))
@@ -33,9 +39,9 @@ def on_message(client, userdata, msg):
 
 def main():
     client = mqtt.Client()
+    client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.subscribe(MQTT_TOPIC)
     print(f"[INFO] Subscribed to {MQTT_TOPIC} on {MQTT_BROKER}:{MQTT_PORT}")
     client.loop_forever()
 

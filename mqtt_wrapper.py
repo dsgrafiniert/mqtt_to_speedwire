@@ -69,7 +69,7 @@ def run_emeter_simulator(payload: dict):
             udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
             udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
             debug('Starting udp send')
-            udp_socket.sendto(packet_data, (''239.12.255.254'', 9522))
+            udp_socket.sendto(packet_data, ('239.12.255.254', 9522))
             debug(f"Sent multicast packet for serial number {serial_number}", "INFO")
             debug(f"With packet data: {packet_data}", "INFO")
 

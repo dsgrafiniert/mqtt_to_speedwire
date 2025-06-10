@@ -50,10 +50,10 @@ def run_emeter_simulator(payload: dict):
         packet.begin(int(time.time() * 1000))
 
         # Totals
-        packet.addMeasurementValue(emeterPacket.SMA_POSITIVE_ACTIVE_POWER, round(payload["active_power"] * 10))
-        packet.addCounterValue(emeterPacket.SMA_POSITIVE_ACTIVE_ENERGY, round(payload["total_forward_energy"] * 1000 * 3600))
-        packet.addMeasurementValue(emeterPacket.SMA_NEGATIVE_ACTIVE_POWER, 0)
-        packet.addCounterValue(emeterPacket.SMA_NEGATIVE_ACTIVE_ENERGY, 0)
+        packet.addMeasurementValue(emeterPacket.SMA_POSITIVE_ACTIVE_POWER, 0)
+        packet.addCounterValue(emeterPacket.SMA_POSITIVE_ACTIVE_ENERGY, 0)
+        packet.addMeasurementValue(emeterPacket.SMA_NEGATIVE_ACTIVE_POWER, round(payload["active_power"] * 10))
+        packet.addCounterValue(emeterPacket.SMA_NEGATIVE_ACTIVE_ENERGY, round(payload["total_forward_energy"] * 1000 * 3600))
  
         packet.end()
 
